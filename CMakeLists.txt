@@ -4,6 +4,11 @@ project(SoundBites)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Win-specific: Ignore warnings about sprintf() in this case.
+if(WIN32)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 #-----------------------------------------------------------------------------
 # Local CMake Modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -24,20 +29,9 @@ find_package(Wave REQUIRED)
 include_directories(${WAVE_INCLUDE_DIR})
 
 #-----------------------------------------------------------------------------
-# Set up build product locations
-
-# Win-specific: we want shared libs (dlls) in same dir as exe files.
-if(WIN32)
-	set(DISPLAYSERVERCLIENT_SHARED_LIBRARY_DIR "${CMAKE_INSTALL_BINDIR}")
-else()
-	set(DISPLAYSERVERCLIENT_SHARED_LIBRARY_DIR "${CMAKE_INSTALL_LIBDIR}")
-endif()
-
-set (SOUNDBITES_SOURCES SoundBites.cpp)
-
-#-----------------------------------------------------------------------------
 # Build the executable.
 
+set (SOUNDBITES_SOURCES SoundBites.cpp)
 set (SOUNDBITES_HEADERS
 )
 
