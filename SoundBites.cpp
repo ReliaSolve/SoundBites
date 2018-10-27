@@ -10,7 +10,7 @@ static float g_fracSound = 0.38f;
 
 /// Fraction of the maximum absolute difference from the average that is
 /// declared to be silent again.
-static float g_fracSilence = 0.01f;
+static float g_fracSilence = 0.005f;
 
 /// How many consecutive samples have to be silence before we declare the end
 /// (or beginning) of a sound.
@@ -18,8 +18,12 @@ static int g_silenceSamples = 5;
 
 void Usage(std::string name)
 {
-  std::cerr << "Usage: " << name << " [-v] inFile outFileBase" << std::endl;
+  std::cerr << "Usage: " << name << " [-v] [-fracSound F] [-fracSilence F]";
+  std::cerr << " [-silenceSamples N] inFile outFileBase" << std::endl;
   std::cerr << "       -v: Verbose, print additional info" << std::endl;
+  std::cerr << "       -fracSound: Fraction of the maximum magnitude indicating sound (default " << g_fracSound << ")" << std::endl;
+  std::cerr << "       -fracSilence: Fraction of the maximum magnitude indicating silence (default " << g_fracSilence << ")" << std::endl;
+  std::cerr << "       -silenceSamples: number of consecutive samples below silence indicating start/end of sound (default " << g_silenceSamples << ")" << std::endl;
   std::cerr << "       inFile: Name of the input WAV file to read from" << std::endl;
   std::cerr << "       outFileName: Base name of output file, #####.wav added" << std::endl;
   exit(-1);
@@ -36,6 +40,15 @@ int main(int argc, const char *argv[])
       Usage(argv[0]);
     } else if (std::string("-v") == argv[i]) {
       verbose = true;
+    } else if (std::string("-fracSound") == argv[i]) {
+      if (++i >= argc) { Usage(argv[0]); }
+      g_fracSound = static_cast<float>(atof(argv[i]));
+    } else if (std::string("-fracSilence") == argv[i]) {
+      if (++i >= argc) { Usage(argv[0]); }
+      g_fracSilence = static_cast<float>(atof(argv[i]));
+    } else if (std::string("-silenceSamples") == argv[i]) {
+      if (++i >= argc) { Usage(argv[0]); }
+      g_silenceSamples = atoi(argv[i]);
     } else if (argv[i][0] == '-') {
       Usage(argv[0]);
     } else switch (++realParams) {
