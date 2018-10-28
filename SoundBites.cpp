@@ -19,11 +19,12 @@ static int g_silenceSamples = 5;
 void Usage(std::string name)
 {
   std::cerr << "Usage: " << name << " [-v] [-fracSound F] [-fracSilence F]";
-  std::cerr << " [-silenceSamples N] inFile outFileBase" << std::endl;
+  std::cerr << " [-silenceSamples N] [-rawOut] inFile outFileBase" << std::endl;
   std::cerr << "       -v: Verbose, print additional info" << std::endl;
   std::cerr << "       -fracSound: Fraction of the maximum magnitude indicating sound (default " << g_fracSound << ")" << std::endl;
   std::cerr << "       -fracSilence: Fraction of the maximum magnitude indicating silence (default " << g_fracSilence << ")" << std::endl;
   std::cerr << "       -silenceSamples: number of consecutive samples below silence indicating start/end of sound (default " << g_silenceSamples << ")" << std::endl;
+  std::cerr << "       -rawOut: Write 16-bit signed mono raw output" << std::endl;
   std::cerr << "       inFile: Name of the input WAV file to read from" << std::endl;
   std::cerr << "       outFileName: Base name of output file, #####.wav added" << std::endl;
   exit(-1);
@@ -33,6 +34,7 @@ int main(int argc, const char *argv[])
 {
   // Parse the command line
   bool verbose = false;
+  bool rawOut = false;
   std::string inFileName, outFileBaseName;
   size_t realParams = 0;
   for (int i = 1; i < argc; i++) {
@@ -49,6 +51,8 @@ int main(int argc, const char *argv[])
     } else if (std::string("-silenceSamples") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       g_silenceSamples = atoi(argv[i]);
+    } else if (std::string("-rawOut") == argv[i]) {
+      rawOut = true;
     } else if (argv[i][0] == '-') {
       Usage(argv[0]);
     } else switch (++realParams) {
@@ -175,23 +179,46 @@ int main(int argc, const char *argv[])
     }
 
     // Write the section to a file whose name depends on the index.
-    wave::File write_file;
     char number[10];
     sprintf(number, "%05d", whichOutput);
-    std::string outFileName = outFileBaseName + number + ".wav";
-    write_file.Open(outFileName.c_str(), wave::kOut);
-    if (err) {
-      std::cerr << "Something went wrong in out open" << std::endl;
-      return 3;
-    }
-    write_file.set_sample_rate(read_file.sample_rate());
-    write_file.set_bits_per_sample(read_file.bits_per_sample());
-    write_file.set_channel_number(numChannels);
+    if (rawOut) {
+      std::string outFileName = outFileBaseName + number + ".raw";
+      FILE *f = fopen(outFileName.c_str(), "wb");
+      if (f == nullptr) {
+        std::cerr << "Something went wrong in out open" << std::endl;
+        return 3;
+      }
+      // Average all of the channels for each sample and write the
+      // result.
+      for (size_t s = 0; s < snippet.size(); s++) {
+        float val = 0;
+        for (uint16_t c = 0; c < numChannels; c++) {
+          val += snippet[numChannels * s + c];
+        }
+        val /= numChannels;
+        int16_t intVal = static_cast<int16_t>(std::round(val));
+        fwrite(&intVal, sizeof(intVal), 1, f);
+      }
 
-    err = write_file.Write(snippet);
-    if (err) {
-      std::cerr << "Something went wrong in write" << std::endl;
-      return 4;
+      fclose(f);
+    } else {
+      // Write a WAV file with the same information as the input image.
+      wave::File write_file;
+      std::string outFileName = outFileBaseName + number + ".wav";
+      write_file.Open(outFileName.c_str(), wave::kOut);
+      if (err) {
+        std::cerr << "Something went wrong in out open" << std::endl;
+        return 3;
+      }
+      write_file.set_sample_rate(read_file.sample_rate());
+      write_file.set_bits_per_sample(read_file.bits_per_sample());
+      write_file.set_channel_number(numChannels);
+
+      err = write_file.Write(snippet);
+      if (err) {
+        std::cerr << "Something went wrong in write" << std::endl;
+        return 4;
+      }
     }
 
     // Skip past this section, which means one past the end of the sound.
