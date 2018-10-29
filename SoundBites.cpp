@@ -205,7 +205,7 @@ int main(int argc, const char *argv[])
       // Write a WAV file with the same information as the input image.
       wave::File write_file;
       std::string outFileName = outFileBaseName + number + ".wav";
-      write_file.Open(outFileName.c_str(), wave::kOut);
+      err = write_file.Open(outFileName.c_str(), wave::kOut);
       if (err) {
         std::cerr << "Something went wrong in out open" << std::endl;
         return 3;
